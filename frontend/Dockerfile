@@ -1,24 +1,13 @@
-# as production
-FROM node:21-alpine
-RUN apk --update --no-cache add \
-    libc6-compat \
-    automake \
-    libtool \
-    autoconf \
-    build-base \
-    zlib \
-    zlib-dev
-
+# Stage 1: Build the app
+FROM node:21-alpine AS builder
 WORKDIR /app
-
 COPY package.json .
-
 RUN npm install
-
 COPY . .
+RUN npm run build
 
-ENV NODE_ENV=local
-
-EXPOSE 5173
-
-CMD [ "npm", "run", "dev" ]
+# Stage 2: Serve static assets
+FROM nginx:alpine AS production
+COPY --from=builder /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
